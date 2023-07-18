@@ -14,31 +14,31 @@ public class LedgerList<T> implements Serializable {
 
     // Constructor
     public LedgerList() {
-	list = new ArrayList<T>();
+        list = new ArrayList<T>();
     }
 
     // Return ledger size.
     public int size() {
-	return this.list.size();
+        return this.list.size();
     }
 
     // Retrieve the first block in the ledger.
     public T getFirst() {
-	return this.list.get(0);
+        return this.list.get(0);
     }
 
     // Retrieve the last block in the ledger.
     public T getLast() {
-	return this.list.get(size() - 1);
+        return this.list.get(this.size() - 1);
     }
 
     // Add a block at the end of the ledger.
     public boolean add(T e) {
-	return this.list.add(e);
+        return this.list.add(e);
     }
 
     // Retrieve block at specific index.
     public T findByIndex(int index) {
-	return this.list.get(index);
+        return this.list.get(index);
     }
 }

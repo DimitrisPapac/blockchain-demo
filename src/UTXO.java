@@ -14,61 +14,61 @@ public class UTXO implements Serializable {
 
     // Constructor
     public UTXO(String parentTransactionID, PublicKey sender,
-				PublicKey receiver, double fundToTransfer) {
-	this.sequentialNumber = UtilityMethods.getUniqueNumber();
-	this.parentTransactionID = parentTransactionID;
-	this.sender = sender;
-	this.receiver = receiver;
-	this.fundTransferred = fundToTransfer;
-	this.timestamp = UtilityMethods.getTimeStamp();
-	this.hashID = computeHashID();
+                PublicKey receiver, double fundToTransfer) {
+        this.sequentialNumber = UtilityMethods.getUniqueNumber();
+        this.parentTransactionID = parentTransactionID;
+        this.sender = sender;
+        this.receiver = receiver;
+        this.fundTransferred = fundToTransfer;
+        this.timestamp = UtilityMethods.getTimeStamp();
+        this.hashID = computeHashID();
     }
 
     protected String computeHashID() {
-	String message = this.parentTransactionID
-		+ UtilityMethods.getKeyString(this.sender)
-		+ UtilityMethods.getKeyString(this.receiver)
-		+ Double.toHexString(this.fundTransferred)
-		+ Long.toHexString(this.timestamp)
-		+ Long.toHexString(this.sequentialNumber);
+        String message = this.parentTransactionID
+                + UtilityMethods.getKeyString(this.sender)
+                + UtilityMethods.getKeyString(this.receiver)
+                + Double.toHexString(this.fundTransferred)
+                + Long.toHexString(this.timestamp)
+                + Long.toHexString(this.sequentialNumber);
 
-	return UtilityMethods.messageDigestSHA256_toString(message);
+        return UtilityMethods.messageDigestSHA256_toString(message);
     }
 
     public String getHashID() {
-	return this.hashID;
+        return this.hashID;
     }
 
     public String getParentTransactionID() {
-	return this.parentTransactionID;
+        return this.parentTransactionID;
     }
 
     public PublicKey getSender() {
-	return this.sender;
+        return this.sender;
     }
 
     public PublicKey getReceiver() {
-	return this.receiver;
+        return this.receiver;
     }
 
     public long getTimeStamp() {
-	return this.timestamp;
+        return this.timestamp;
     }
 
     public long getSequentialNumber() {
-	return this.sequentialNumber;
+        return this.sequentialNumber;
     }
 
     public double getFundTransferred() {
-	return this.fundTransferred;
+        return this.fundTransferred;
     }
 
     // Two UTXOs are equal if they have the same hash ID.
     public boolean equals(UTXO utxo) {
-	return this.getHashID().equals(utxo.getHashID());
+        return this.getHashID().equals(utxo.getHashID());
     }
 
     public boolean isMiningReward() {
-	return false;
+        return false;
     }
 }
