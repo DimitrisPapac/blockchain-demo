@@ -297,4 +297,51 @@ public class UtilityMethods {
 		}
 	}
 
+	// Method for applying the recursive algorithm for computing the Merkle tree root
+	// from a given array of hashes.
+	public static String computeMerkleTreeRoorHash(String[] hashes) {
+		return computeMerkleTreeRootHash(hashes, 0, hashes.length - 1);
+	}
+
+	// Method for recursively building the Merkle tree root hash.
+	private static String computeMerkleTreeRootHash(String[] hashes, int start, int end) {
+		if (end - start + 1 == 1)        // for a single hash, the output is the hash itself
+			return hashes[end];
+		else if (end - start + 1 == 2)   // for two nodes, the output is their hash
+			return messageDigestSHA256_toString(hashes[start] + hashes[end]);
+		else {   // more than 2 nodes
+			// Split array in two halves
+			int mid = (start + end) >> 1;   // (start + end) / 2
+			String msg = computeMerkleTreeRootHash(hashes, start, mid)
+					+ computeMerkleTreeRootHash(hashes, mid + 1, end);
+			return messageDigestSHA256_toString(msg);
+		}
+	}
+
+	// Method for displaying the contents of a block.
+	public static void displayBlock(Block block, PrintStream out, int level) {
+		displayTab(out, level, "Block{");
+		displayTab(out, level, "\tID: " + block.getHashID());
+		// Display the transactions contained inside the block
+		for (int i=0; i<block.getTotalNumberOfTransactions(); i++)
+			displayTransaction(block.getTransaction(i), out, level + 1);
+		// Display reward transaction
+		if (block.getRewardTransaction() != null) {
+			displayTab(out, level, "\tReward Transaction:");
+			displayTab(block.getRewardTransaction(), out, level + 1);
+		}
+		displayTab(out, level, "}");
+	}
+
+	// Method for displaying the contents of a blockchain
+	public static void displayBlockchain(Blockchain ledger, PrintStream out, int level) {
+		displayTab(out, level, "Blockchain{ Number of blocks: " + ledger.size());
+		// Display the contents of each block in the chain
+		for (int i=0; i<ledger.size(); i++) {
+			Block block = ledger.getBlock(i);
+			displayBlock(block, out, level + 1);
+		}
+		displayTab(out, level, "}");
+	}
+
 }
