@@ -1,3 +1,5 @@
+import jdk.jshell.execution.Util;
+
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.io.Serializable;
@@ -72,6 +74,18 @@ public class Block implements Serializable {
         return this.hashID;
     }
 
+    public PublicKey getCreator() {
+        return this.creator;
+    }
+
+    public boolean isMined() {
+        return this.mined;
+    }
+
+    public boolean isSigned() {
+        return this.signature != null;
+    }
+
     public int getNonce() {
         return this.nonce;
     }
@@ -127,6 +141,62 @@ public class Block implements Serializable {
         if (this.rewardTransaction == null && pk.equals(this.creator)) {
             this.rewardTransaction = rewardTransaction;
             return true;
+        }
+        else
+            return false;
+    }
+
+    public boolean verifySignature(PublicKey pk) {
+        return UtilityMethods.verifySignature(pk, this.signature, this.getHashID());
+    }
+
+    // Method for setting the signature field once it has been generated.
+    // Once the signature is set, it cannot be changed.
+    public boolean signTheBlock(PublicKey pk, byte[] signature) {
+        if (!this.isSigned()) {
+            if (pk.equals(this.creator)) {
+                // signature must be verified before setting
+                if (UtilityMethods.verifySignature(pk, signature, this.getHashID())) {
+                    this.signature = signature;
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Method for computing the Merkle tree root.
+    private String computeMerkleRoot() {
+        String[] hashes;
+        if (this.rewardTransaction == null) {   // miner is allowed to refuse the reward
+            hashes = new String[this.transactions.size()];
+            for (int i=0; i<this.transactions.size(); i++)
+                hashes[i] = this.transactions.get(i).getHashID();
+        }
+        else {
+            hashes = new String[this.transactions.size() + 1];
+            for (int i=0; i<this.transactions.size(); i++)
+                hashes[i] = this.transactions.get(i).getHashID();
+            hashes[hashes.length - 1] = this.rewardTransaction.getHashID();
+        }
+        return UtilityMethods.computeMerkleTreeRootHash(hashes);
+    }
+
+    public boolean deleteTransaction(Transaction tx, PublicKey pk) {
+        // Only the block's creator is allowed to delete it, provided it
+        // has not been mined or signed yet
+        if (!this.isMined() && !this.isSigned() && pk.equals(this.creator))
+            return this.transactions.remove(tx);
+        else
+            return false;
+    }
+
+    public boolean deleteTransaction(int index, PublicKey pk) {
+        // Only the creator is allowed to delete transactions, provided
+        // that the block has not been mined or signed yet
+        if (!this.isMined() && !this.isSigned() && pk.equals(this.creator)) {
+            Transaction tx = this.transactions.remove(index);
+            return tx != null;
         }
         else
             return false;

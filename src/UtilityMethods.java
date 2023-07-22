@@ -299,7 +299,7 @@ public class UtilityMethods {
 
 	// Method for applying the recursive algorithm for computing the Merkle tree root
 	// from a given array of hashes.
-	public static String computeMerkleTreeRoorHash(String[] hashes) {
+	public static String computeMerkleTreeRootHash(String[] hashes) {
 		return computeMerkleTreeRootHash(hashes, 0, hashes.length - 1);
 	}
 
@@ -328,7 +328,7 @@ public class UtilityMethods {
 		// Display reward transaction
 		if (block.getRewardTransaction() != null) {
 			displayTab(out, level, "\tReward Transaction:");
-			displayTab(block.getRewardTransaction(), out, level + 1);
+			displayTransaction(block.getRewardTransaction(), out, level + 1);
 		}
 		displayTab(out, level, "}");
 	}
