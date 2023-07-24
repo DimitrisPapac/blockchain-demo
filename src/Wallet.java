@@ -15,7 +15,7 @@ import java.security.PublicKey;
 public class Wallet {
 	private KeyPair keyPair;
 	private String walletName;
-	private static String keyLocation = "keys";
+	private static String keyLocation = Configuration.KeyLocation();
 	private Blockchain localLedger = null;  // wallet's local copy of the blockchain
 
 	// Constructor

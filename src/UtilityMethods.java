@@ -1,34 +1,34 @@
-import java.security.MessageDigest;
-import java.security.PublicKey;
-import java.security.PrivateKey;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Key;
-import java.security.Signature;
-import java.security.NoSuchAlgorithmException;
-import java.security.AlgorithmParameters;
-import java.security.SecureRandom;
-import java.security.spec.KeySpec;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-
+// import java.io.PrintStream;
+import java.security.AlgorithmParameters;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.SecureRandom;
+import java.security.Signature;
+import java.security.spec.KeySpec;
 import java.util.Base64;
 import java.util.Calendar;
-import java.io.PrintStream;
+import java.util.InputMismatchException;
+import java.util.Scanner;
 
 public class UtilityMethods {
-
 	private static long uniqueNumber = 0;
 
-	private static final String SIGNING_ALGORITHM = "SHA256withRSA";
+	// private static final String SIGNING_ALGORITHM = Configuration.signatureAlgorithm();
 
 	public static byte[] messageDigestSHA256_toBytes(String message) {
 		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			MessageDigest md = MessageDigest.getInstance(Configuration.hashAlgorithm());
 			md.update(message.getBytes());
 			return md.digest();
 		}
@@ -72,7 +72,7 @@ public class UtilityMethods {
 
 	public static KeyPair generateKeyPair() {
 		try {
-			KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+			KeyPairGenerator kpg = KeyPairGenerator.getInstance(Configuration.keypairAlgorithm());
 			kpg.initialize(2048);
 			KeyPair pair = kpg.generateKeyPair();
 			return pair;
@@ -84,7 +84,7 @@ public class UtilityMethods {
 
 	public static byte[] generateSignature(PrivateKey privateKey, String message) {
 		try {
-			Signature sig = Signature.getInstance(UtilityMethods.SIGNING_ALGORITHM);
+			Signature sig = Signature.getInstance(Configuration.signatureAlgorithm());
 			sig.initSign(privateKey);
 			sig.update(message.getBytes());
 			return sig.sign();
@@ -96,7 +96,7 @@ public class UtilityMethods {
 
 	public static boolean verifySignature(PublicKey publicKey, byte[] signature, String message) {
 		try {
-			Signature sig2 = Signature.getInstance(UtilityMethods.SIGNING_ALGORITHM);
+			Signature sig2 = Signature.getInstance(Configuration.signatureAlgorithm());
 			sig2.initVerify(publicKey);
 			sig2.update(message.getBytes());
 			return sig2.verify(signature);
@@ -112,22 +112,26 @@ public class UtilityMethods {
 		return Base64.getEncoder().encodeToString(key.getEncoded());
 	}
 
-	public static void displayTab(PrintStream out, int level, String s) {
+	// Method for building output depicting a String with proper indentation.
+	public static void displayTab(StringBuilder out, int level, String s) {
 		for (int i=0; i<level; i++)
-			out.print("\t");
-		out.println(s);
+			out.append("\t");
+		out.append(s + System.getProperty("line.separator"));
 	}
 
-	public static void displayUTXO(UTXO ux, PrintStream out, int level) {
+	// Method for building output depicting a UTXO with proper indentation.
+	public static void displayUTXO(UTXO ux, StringBuilder out, int level) {
 		displayTab(out, level, "Fund: " + ux.getFundTransferred()
 				+ ", Receiver: " + UtilityMethods.getKeyString(ux.getReceiver()));
 	}
 
-	public static void displayTransaction(Transaction tx, PrintStream out, int level) {
+	// Method for building output depicting a Transaction with proper indentation.
+	public static void displayTransaction(Transaction tx, StringBuilder out, int level) {
 		displayTab(out, level, "Transaction{");
 		displayTab(out, level + 1, "ID: " + tx.getHashID());
 		displayTab(out, level + 1, "Sender: " + UtilityMethods.getKeyString(tx.getSender()));
 		displayTab(out, level + 1, "Total fund to be transferred: " + tx.getTotalFundToTransfer());
+
 		displayTab(out, level + 1, "Input:");
 		for (int i=0; i<tx.getNumberOfInputUTXOs(); i++) {
 			UTXO ui = tx.getInputUTXO(i);
@@ -139,9 +143,11 @@ public class UtilityMethods {
 			UTXO ut = tx.getOutputUTXO(i);
 			displayUTXO(ut, out, level + 2);
 		}
+
 		UTXO change = tx.getOutputUTXO(tx.getNumberOfOutputUTXOs() - 1);
 		displayTab(out, level + 2, "Change: " + change.getFundTransferred());
 		displayTab(out, level + 1, "Transaction fee: " + Transaction.TRANSACTION_FEE);
+
 		boolean b = tx.verifySignature();
 		displayTab(out, level + 1, "Signature verification: " + b);
 		displayTab(out, level, "}");
@@ -309,7 +315,7 @@ public class UtilityMethods {
 			return hashes[end];
 		else if (end - start + 1 == 2)   // for two nodes, the output is their hash
 			return messageDigestSHA256_toString(hashes[start] + hashes[end]);
-		else {   // more than 2 nodes
+		else {   // > 2 nodes
 			// Split array in two halves
 			int mid = (start + end) >> 1;   // (start + end) / 2
 			String msg = computeMerkleTreeRootHash(hashes, start, mid)
@@ -319,29 +325,61 @@ public class UtilityMethods {
 	}
 
 	// Method for displaying the contents of a block.
-	public static void displayBlock(Block block, PrintStream out, int level) {
+	public static void displayBlock(Block block, StringBuilder out, int level) {
 		displayTab(out, level, "Block{");
 		displayTab(out, level, "\tID: " + block.getHashID());
+
 		// Display the transactions contained inside the block
 		for (int i=0; i<block.getTotalNumberOfTransactions(); i++)
 			displayTransaction(block.getTransaction(i), out, level + 1);
+
 		// Display reward transaction
 		if (block.getRewardTransaction() != null) {
 			displayTab(out, level, "\tReward Transaction:");
 			displayTransaction(block.getRewardTransaction(), out, level + 1);
 		}
+
 		displayTab(out, level, "}");
 	}
 
-	// Method for displaying the contents of a blockchain
-	public static void displayBlockchain(Blockchain ledger, PrintStream out, int level) {
+	// Method for displaying the contents of a blockchain.
+	public static void displayBlockchain(Blockchain ledger, StringBuilder out, int level) {
 		displayTab(out, level, "Blockchain{ Number of blocks: " + ledger.size());
+
 		// Display the contents of each block in the chain
 		for (int i=0; i<ledger.size(); i++) {
 			Block block = ledger.getBlock(i);
 			displayBlock(block, out, level + 1);
 		}
+
 		displayTab(out, level, "}");
+	}
+
+	//
+	public static int guaranteeIntegerInputByScanner(Scanner in, int lowerBound, int upperBound) {
+		int x = -1;
+		try {
+			x = in.nextInt();
+		}
+		catch (InputMismatchException ime) {
+			x = lowerBound - 1;
+		}
+
+		while (x < lowerBound || x > upperBound) {
+			System.out.printf("You selected %d, please only enter an integer in [%d, %d].",
+					x, lowerBound, upperBound);
+			try {
+				x = in.nextInt();
+			}
+			catch (InputMismatchException ime2) {
+				in.nextLine();
+				x = lowerBound - 1;
+			}
+		}
+
+		// Digest the "Enter" so that the scanner object can read a text input later
+		in.nextLine();
+		return x;
 	}
 
 }

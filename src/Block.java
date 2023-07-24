@@ -1,17 +1,16 @@
 import jdk.jshell.execution.Util;
-
+import java.io.Serializable;
 import java.security.PublicKey;
 import java.util.ArrayList;
-import java.io.Serializable;
 // import java.util.Calendar;
 
 public class Block implements Serializable {
     private static final long serialVersionUID = 1L;
-    private int difficultyLevel = 20;   // default difficulty level
+    private int difficultyLevel = Configuration.blockMiningDifficultyLevel();   // default difficulty level
     private ArrayList<Transaction> transactions = new ArrayList<Transaction>();
     private long timestamp;
     private String previousBlockHashID;
-    private int nonce = 0;
+    private int nonce = 0;   // maybe change to BigInteger
     private String hashID;
 
     // for recording the miner/creator of the block

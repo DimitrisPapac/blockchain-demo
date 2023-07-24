@@ -1,6 +1,7 @@
 import jdk.jshell.execution.Util;
 
 public class Miner extends Wallet {
+
     // Constructor
     public Miner(String minerName, String password) {
         super(minerName, password);
