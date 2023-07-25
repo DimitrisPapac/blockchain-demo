@@ -29,4 +29,8 @@ public class Configuration {
     public static final int blockMiningDifficultyLevel() {
         return Configuration.BLOCK_MINING_DIFFICULTY_LEVEL;
     }
+
+    // Number of sign-in bonus blocks that the genesis miner will mine.
+    // Additional sign-in bonus transactions are collected by other miners.
+    public static final int SELF_BLOCKS_TO_MINE_LIMIT = 2;
 }
