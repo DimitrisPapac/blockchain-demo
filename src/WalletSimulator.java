@@ -307,7 +307,7 @@ public class WalletSimulator extends JFrame {
         helpItem2.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                showHelpMessage("1. When you start a transactio, "
+                showHelpMessage("1. When you start a transaction, "
                     + "you need to choose the recipient(s) and "
                     + "the amount to send to each recipient.\n"
                     + "2. The private message you send to a "
