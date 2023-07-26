@@ -138,8 +138,8 @@ public class WalletMessageTaskManager implements Runnable {
             // Upon receiving a block, validate it and then try to update
             // the local blockchain
             System.out.println("Received a block broadcast message.");
-            MessageBlockchainBroadcast mbcb = (MessageBlockchainBroadcast) msg;
-            this.receiveMessageBlockBroadcast(mbcb);
+            MessageBlockBroadcast mbb = (MessageBlockBroadcast) msg;
+            this.receiveMessageBlockBroadcast(mbb);
         }
         else if (msg.getMessageType() == Message.BLOCKCHAIN_BROADCAST) {
             System.out.println("Received a blockchain broadcast message.");

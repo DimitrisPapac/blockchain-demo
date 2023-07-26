@@ -200,7 +200,7 @@ public class WalletSimulator extends JFrame {
                         }
                         // Consume the ENTER so that the cursor stays at the beginning
                         e.consume();
-                        textInpt.setText("");
+                        textInput.setText("");
                     }
                 }
             }
@@ -373,7 +373,7 @@ public class WalletSimulator extends JFrame {
         ArrayList<UTXO> rewards = new ArrayList<UTXO>();
         double balance = ledger.findRelatedUTXOs(w.getPublicKey(), all,
                                             spent, unspent, sentTx, rewards);
-        byte level = 0;
+        int level = 0;
         this.displayTab(sb, level, w.getName() + "{");
         this.displayTab(sb, level + 1, "All UTXOs:");
         this.displayUTXOs(sb, all, level + 2);
@@ -393,7 +393,7 @@ public class WalletSimulator extends JFrame {
     }
 
     // Prepare the content of UTXOs into a text storage: StringBuilder.
-    private void displayUTXOs(StringBuilder sb, ArrayList<UTXO> utxos, byte level) {
+    private void displayUTXOs(StringBuilder sb, ArrayList<UTXO> utxos, int level) {
         for (int i=0; i<utxos.size(); i++) {
             UTXO utxo = utxos.get(i);
             if (this.showPublicKeyInBalance()) {
@@ -413,7 +413,7 @@ public class WalletSimulator extends JFrame {
     }
 
     // Prepare a text message into a text storage: StringBuilder.
-    private void displayTab(StringBuilder sb, byte level, String msg) {
+    private void displayTab(StringBuilder sb, int level, String msg) {
         for (byte i=0; i<level; i++)
             sb.append("\t");
         sb.append(msg);

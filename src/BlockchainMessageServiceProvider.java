@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyPair;
 import java.security.PublicKey;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -147,7 +148,7 @@ public class BlockchainMessageServiceProvider {
     }
 }
 
-// Inner class
+// Inner class No. 1
 class ConnectionChannelTaskManager implements Runnable {
     private Socket socket;
     private ObjectInputStream in = null;
@@ -251,12 +252,184 @@ class ConnectionChannelTaskManager implements Runnable {
     }
 
     // Method for returning the readable string of the client's public key.
-    protected String getConnectionID() {
+    protected String getConnectionChannelID() {
         return this.ConnectionID;
     }
 
     // Initiated by the server side.
     private void activeClose() {
+        this.forever = false;
+        try {
+            this.server.removeConnectionChannel(this.getConnectionChannelID());
+            System.out.println("ConnectionChannelTaskManager: preparing to "
+                + "close connection: " + this.getDelegateName() + "|"
+                + this.getConnectionChannelID());
+            // Ask the client side to also close the connection
+            MessageTextPrivate mtp = new MessageTextPrivate(Message.TEXT_CLOSE,
+                    this.keypair.getPrivate(), this.keypair.getPublic(),
+                    this.getDelegateName(), this.delegatePublicKey);
+            this.sendMessage(mtp);
+            // Sleep enough time so that the above message can be processed
+            Thread.sleep(1000);
+            System.out.println("ConnectionChannelTaskManager "
+                + this.getDelegateName() + " closed actively ("
+                + this.getConnectionChannelID() + ")");
+            in.close();
+            out.close();
+            socket.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
+    // This close action is initiated by the client side.
+    protected void passiveClose() {
+        this.forever = false;
+        try {
+            this.server.removeConnectionChannel(this.getConnectionChannelID());
+            in.close();
+            out.close();
+            socket.close();
+            System.out.println("ConnectionChannelTaskManager closed passively ("
+                + this.getConnectionChannelID() + ")");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+// Inner class No. 2
+class MessageCheckingTaskManager implements Runnable {
+    private boolean forever = true;
+    private long sleepTime = 100;   // in milliseconds
+    private BlockchainMessageServiceProvider server;
+    private ConcurrentLinkedQueue<Message> messageQueue;
+    // Public and private key of the server
+    private KeyPair keypair;
+
+    // Constructor
+    protected MessageCheckingTaskManager(BlockchainMessageServiceProvider server,
+                                         ConcurrentLinkedQueue<Message> messageQueue,
+                                         KeyPair keypair) {
+        this.server = server;
+        this.messageQueue = messageQueue;
+        this.keypair = keypair;
+    }
+
+    public void run() {
+        while (forever) {
+            try {
+                // Check for messages in the queue
+                if (this.messageQueue.isEmpty())
+                    Thread.sleep(this.sleepTime);
+                else {
+                    // Process all available messages
+                    while (!this.messageQueue.isEmpty()) {
+                        Message msg = this.messageQueue.poll();
+                        this.processMessage(msg);
+                    }
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Method for processing messages depending on their types,
+    // senders, and receivers.
+    protected void processMessage(Message msg) throws Exception {
+        if (msg == null)
+            return;
+        // All broadcast messages would be forwarded to all wallets
+        if (msg.isForBroadcast()) {
+            ArrayList<ConnectionChannelTaskManager> all =
+                    this.server.getAllConnectionChannelTaskManager();
+            for (int i=0; i<all.size(); i++)
+                all.get(i).sendMessage(msg);
+
+        }
+        else if (msg.getMessageType() == Message.TEXT_PRIVATE) {
+            MessageTextPrivate mtp = (MessageTextPrivate) msg;
+            if (!mtp.isValid())
+                return;
+            String text = null;
+            // Examine receiver and check if it is the service provider first
+            if (mtp.getReceiver().equals(this.keypair.getPublic())) {
+                text = mtp.getMessageBody();
+                // There are only two types of private text messages for the message
+                // service provider. One is to inform the service provider that a
+                // connection should be closed, another one is to ask the service
+                // provider for the addresses of participating wallets.
+                if (text.equals(Message.TEXT_CLOSE)) {
+                    // The client wants to close the connection.
+                    // Locate the corresponding connection to close it.
+                    System.out.printf("%s left the system.%n", mtp.getSenderName());
+                    ConnectionChannelTaskManager thread =
+                            this.server.findConnectionChannelTaskManager(
+                                    UtilityMethods.getKeyString(mtp.getSenderKey()));
+                    if (thread != null)
+                        thread.passiveClose();
+                }
+                else if (text.equals(Message.TEXT_ASK_ADDRESSES)) {
+                    // Display who is asking for the list of addresses.
+                    // Requester's information is not displayed if it is the
+                    // genesis miner
+                    if (!mtp.getSenderKey().equals(
+                            BlockchainMessageServiceProvider.getGenesisBlockchain().getGenesisMiner()))
+                        System.out.printf("%s is asking for a list of users.%n", mtp.getSenderName());
+                    ArrayList<KeyNamePair> addresses = this.server.getAllAddresses();
+                    // If there is no address, or only one address is the same
+                    // as the requester, ignore it.
+                    if (addresses.size() == 0)
+                        return;
+                    if (addresses.size() == 1) {
+                        KeyNamePair knp = addresses.get(0);
+                        if (knp.getKey().equals(mtp.getSenderKey()))
+                            return;
+                    }
+                    ConnectionChannelTaskManager thread =
+                            this.server.findConnectionChannelTaskManager(
+                                    UtilityMethods.getKeyString(mtp.getSenderKey()));
+                    if (thread != null) {
+                        MessageAddressPrivate map = new MessageAddressPrivate(addresses);
+                        thread.sendMessage(map);
+                    }
+                }
+                else {
+                    // Anything else to this message service provider will be ignored
+                    System.out.printf("Garbage message for service provider found: %s%n", text);
+                }
+            }
+            else {
+                // It must be a message for a wallet. Forward the message.
+                ConnectionChannelTaskManager thread =
+                        this.server.findConnectionChannelTaskManager(
+                                UtilityMethods.getKeyString(mtp.getReceiver()));
+                // If thread is null, user must have logged out
+                if (thread != null)
+                    thread.sendMessage(mtp);
+            }
+        }
+        else if (msg.getMessageType() == Message.BLOCKCHAIN_PRIVATE) {
+            // Try to forward this message to the proper receiver
+            System.out.println("Forwarding a blockchain private message...");
+            MessageBlockchainPrivate mbcp = (MessageBlockchainPrivate) msg;
+            ConnectionChannelTaskManager thread =
+                    this.server.findConnectionChannelTaskManager(
+                            UtilityMethods.getKeyString(mbcp.getReceiver()));
+            if (thread != null)
+                thread.sendMessage(mbcp);
+        }
+        else {
+            System.out.println("Message type not currently supported. type = "
+                + msg.getMessageType() + ", object = " + msg.getMessageBody());
+        }
+    }
+
+    public void close() {
+        forever = false;
     }
 }
